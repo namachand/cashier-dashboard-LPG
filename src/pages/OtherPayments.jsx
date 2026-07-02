@@ -1,7 +1,7 @@
 import Header from '../components/layout/Header';
 import Sidebar from '../components/layout/Sidebar';
 import { useEffect, useState } from 'react';
-import { getOtherPayments, getOtherPaymentsSummary, recordOtherPayment } from '../services/cashierApi';
+import { findCustomer, getOtherPayments, getOtherPaymentsSummary, recordOtherPayment } from '../services/cashierApi';
 
 const methodOptions = [
   { value: 'UPI', label: 'UPI' },
@@ -44,6 +44,7 @@ function OtherPayments() {
   const [transferId, setTransferId] = useState('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  const [customerResults, setCustomerResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -85,6 +86,32 @@ function OtherPayments() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleCustomerSearch = async (value) => {
+    setCustomerName(value);
+
+    if (!value || value.trim().length < 2) {
+      setCustomerResults([]);
+      return;
+    }
+
+    try {
+      const response = await findCustomer(value.trim());
+      if (response?.success && Array.isArray(response.data)) {
+        setCustomerResults(response.data);
+      } else {
+        setCustomerResults([]);
+      }
+    } catch (error) {
+      console.error('Customer search failed:', error);
+      setCustomerResults([]);
+    }
+  };
+
+  const handleSelectCustomer = (customer) => {
+    setCustomerName(customer?.name || '');
+    setCustomerResults([]);
+  };
 
   const handleSaveTransfer = async () => {
     if (!customerName.trim()) return;
@@ -165,12 +192,29 @@ function OtherPayments() {
               <div className="reconciliation-form">
                 <div className="form-field">
                   <label>Customer name</label>
-                  <input
-                    type="text"
-                    placeholder="Customer name"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                  />
+                  <div className="customer-search-group">
+                    <input
+                      type="text"
+                      placeholder="Customer name"
+                      value={customerName}
+                      onChange={(e) => handleCustomerSearch(e.target.value)}
+                    />
+                    {customerResults.length ? (
+                      <div className="search-results">
+                        {customerResults.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className="search-item"
+                            onClick={() => handleSelectCustomer(item)}
+                          >
+                            <span>{item.name || 'Customer'}</span>
+                            <span>{item.phone || '-'}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="form-field">
                   <label>Method</label>

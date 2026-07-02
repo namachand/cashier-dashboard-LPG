@@ -1,5 +1,10 @@
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import logo from '../../assets/logo.svg';
+
+const CASH_DAY_CLOSED_KEY = 'cashier_day_closed';
+
+const readCashDayClosedState = () => localStorage.getItem(CASH_DAY_CLOSED_KEY) === 'true';
 
 const navItems = [
   { label: 'Dashboard', path: '/', icon: 'dashboard' },
@@ -15,68 +20,87 @@ const navItems = [
 
 const iconMap = {
   dashboard: (
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M4 11.5L12 4L20 11.5V20C20 20.5523 19.5523 21 19 21H15C14.4477 21 14 20.5523 14 20V15H10V20C10 20.5523 9.55228 21 9 21H5C4.44772 21 4 20.5523 4 20V11.5Z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect width="7" height="9" x="3" y="3" rx="1"></rect>
+      <rect width="7" height="5" x="14" y="3" rx="1"></rect>
+      <rect width="7" height="9" x="14" y="12" rx="1"></rect>
+      <rect width="7" height="5" x="3" y="16" rx="1"></rect>
     </svg>
   ),
   notebook: (
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M6 4H14C14.5523 4 15 4.44772 15 5V19C15 19.5523 14.5523 20 14 20H6C5.44772 20 5 19.5523 5 19V5C5 4.44772 5.44772 4 6 4Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/>
-      <path d="M15 8H18C18.5523 8 19 8.44772 19 9V17C19 17.5523 18.5523 18 18 18H15" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/>
-      <path d="M8 7H12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-      <path d="M8 11H12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-      <path d="M8 15H12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"></path>
+      <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"></path>
     </svg>
   ),
   cashIn: (
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 4V20" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-      <path d="M18 12L12 6L6 12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 17V3"></path>
+      <path d="m6 11 6 6 6-6"></path>
+      <path d="M19 21H5"></path>
     </svg>
   ),
   cashOut: (
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 20V4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-      <path d="M6 12L12 18L18 12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m18 9-6-6-6 6"></path>
+      <path d="M12 3v14"></path>
+      <path d="M5 21h14"></path>
     </svg>
   ),
   location: (
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 21C12 21 5 13.8607 5 9.5C5 6.46243 7.46243 4 10.5 4C13.5376 4 16 6.46243 16 9.5C16 13.8607 9 21 9 21" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx="10.5" cy="9.5" r="2.5" stroke="currentColor" strokeWidth="1.7"/>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"></path>
     </svg>
   ),
   payments: (
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="4" y="7" width="16" height="10" rx="2" stroke="currentColor" strokeWidth="1.7"/>
-      <path d="M4 11H20" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-      <path d="M7 15H7.01" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect width="20" height="14" x="2" y="5" rx="2"></rect>
+      <line x1="2" x2="22" y1="10" y2="10"></line>
     </svg>
   ),
   lock: (
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="6" y="11" width="12" height="9" rx="2" stroke="currentColor" strokeWidth="1.7"/>
-      <path d="M8 11V8C8 5.79086 9.79086 4 12 4C14.2091 4 16 5.79086 16 8V11" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
     </svg>
   ),
   chart: (
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M7 17L11 13L15 17L17 15" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M5 21H19" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-      <path d="M7 13V6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-      <path d="M11 17V10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-      <path d="M15 21V14" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path>
+      <path d="M14 2v5a1 1 0 0 0 1 1h5"></path>
+      <path d="M8 18v-1"></path>
+      <path d="M12 18v-6"></path>
+      <path d="M16 18v-3"></path>
     </svg>
   ),
   settings: (
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 15.5C13.933 15.5 15.5 13.933 15.5 12C15.5 10.067 13.933 8.5 12 8.5C10.067 8.5 8.5 10.067 8.5 12C8.5 13.933 10.067 15.5 12 15.5Z" stroke="currentColor" strokeWidth="1.7"/>
-      <path d="M19.4 12.9999C19.4 12.3999 19.3 11.7999 19.1 11.1999L21.5 9.29992L19.2 5.69992L16.4 6.99992C15.8 6.49992 15.1 6.09992 14.3 5.89992L13.7 3.09992H10.3L9.7 5.89992C8.9 6.09992 8.2 6.49992 7.6 6.99992L4.8 5.69992L2.5 9.29992L4.9 11.1999C4.7 11.7999 4.6 12.3999 4.6 12.9999C4.6 13.5999 4.7 14.1999 4.9 14.7999L2.5 16.6999L4.8 20.2999L7.6 19.0C8.2 19.5 8.9 19.9 9.7 20.1L10.3 22.9H13.7L14.3 20.1C15.1 19.9 15.8 19.5 16.4 19.0L19.2 20.3L21.5 16.7L19.1 14.8C19.3 14.2 19.4 13.6 19.4 12.9999Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path>
+      <circle cx="12" cy="12" r="3"></circle>
     </svg>
   ),
 };
 
 function Sidebar() {
+  const [isCashDayClosed, setIsCashDayClosed] = useState(readCashDayClosedState());
+
+  useEffect(() => {
+    const handleCashDayStateChanged = () => {
+      setIsCashDayClosed(readCashDayClosedState());
+    };
+
+    window.addEventListener('cashier-day-state-changed', handleCashDayStateChanged);
+    window.addEventListener('storage', handleCashDayStateChanged);
+
+    return () => {
+      window.removeEventListener('cashier-day-state-changed', handleCashDayStateChanged);
+      window.removeEventListener('storage', handleCashDayStateChanged);
+    };
+  }, []);
+
+  const isLockedNavItem = (path) =>
+    isCashDayClosed && (path === '/cash-in' || path === '/cash-out');
+
   return (
     <aside className="sidebar">
       <div>
@@ -93,20 +117,43 @@ function Sidebar() {
       </div>
 
       <nav className="sidebar-nav">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-          >
-            <span className="nav-icon" aria-hidden="true">{iconMap[item.icon]}</span>
-            {item.label}
-          </NavLink>
-        ))}
+        {navItems.map((item) => {
+          const isDisabled = isLockedNavItem(item.path);
+
+          if (isDisabled) {
+            return (
+              <span
+                key={item.path}
+                className="nav-link disabled"
+                aria-disabled="true"
+                title="Submit opening cash to enable this menu"
+              >
+                <span className="nav-icon" aria-hidden="true">{iconMap[item.icon]}</span>
+                {item.label}
+              </span>
+            );
+          }
+
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+            >
+              <span className="nav-icon" aria-hidden="true">{iconMap[item.icon]}</span>
+              {item.label}
+            </NavLink>
+          );
+        })}
       </nav>
 
       <div className="sidebar-footer">
-        <span className="status-dot active" />
+        <span className="status-icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path>
+            <path d="m9 12 2 2 4-4"></path>
+          </svg>
+        </span>
         <div>
           <p className="footer-title">Day Active</p>
           <p className="footer-meta">Started at 08:42 AM by Rajesh K.</p>

@@ -8,20 +8,108 @@ import OtherPayments from '../pages/OtherPayments';
 import Closing from '../pages/Closing';
 import Reports from '../pages/Reports';
 import Settings from '../pages/Settings';
+import Login from '../pages/Login';
+
+const AUTH_TOKEN_KEY = 'cashier_auth_token';
+const AUTH_USER_KEY = 'cashier_auth_user';
+
+function RequireCashier({ children }) {
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  const userRaw = localStorage.getItem(AUTH_USER_KEY);
+
+  if (!token || !userRaw) {
+    return <Navigate to="/login" replace />;
+  }
+
+  try {
+    const user = JSON.parse(userRaw);
+    if (user?.role !== 'CASHIER') {
+      return <Navigate to="/login" replace />;
+    }
+  } catch (error) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
 
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Dashboard />} />
-      <Route path="/opening-cash" element={<OpeningCash />} />
-      <Route path="/cash-in" element={<CashIn />} />
-      <Route path="/cash-out" element={<CashOut />} />
-      <Route path="/live-position" element={<LivePosition />} />
-      <Route path="/other-payments" element={<OtherPayments />} />
-      <Route path="/closing" element={<Closing />} />
-      <Route path="/reports" element={<Reports />} />
-      <Route path="/settings" element={<Settings />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="/"
+        element={
+          <RequireCashier>
+            <Dashboard />
+          </RequireCashier>
+        }
+      />
+      <Route
+        path="/opening-cash"
+        element={
+          <RequireCashier>
+            <OpeningCash />
+          </RequireCashier>
+        }
+      />
+      <Route
+        path="/cash-in"
+        element={
+          <RequireCashier>
+            <CashIn />
+          </RequireCashier>
+        }
+      />
+      <Route
+        path="/cash-out"
+        element={
+          <RequireCashier>
+            <CashOut />
+          </RequireCashier>
+        }
+      />
+      <Route
+        path="/live-position"
+        element={
+          <RequireCashier>
+            <LivePosition />
+          </RequireCashier>
+        }
+      />
+      <Route
+        path="/other-payments"
+        element={
+          <RequireCashier>
+            <OtherPayments />
+          </RequireCashier>
+        }
+      />
+      <Route
+        path="/closing"
+        element={
+          <RequireCashier>
+            <Closing />
+          </RequireCashier>
+        }
+      />
+      <Route
+        path="/reports"
+        element={
+          <RequireCashier>
+            <Reports />
+          </RequireCashier>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <RequireCashier>
+            <Settings />
+          </RequireCashier>
+        }
+      />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }

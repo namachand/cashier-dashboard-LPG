@@ -79,6 +79,17 @@ export async function getTodayOfficeExpenses() {
   return fetchJson(`${API_BASE}/cashier/office-expenses/today`);
 }
 
+export async function getCashOutExpenseRequests() {
+  return fetchJson(`${API_BASE}/cashier/expense-requests`);
+}
+
+export async function reviewCashOutExpenseRequest(expenseId, status, paymentDetails = {}) {
+  return fetchJson(`${API_BASE}/cashier/expense-requests/${expenseId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ status, ...paymentDetails }),
+  });
+}
+
 export async function recordOtherPayment(payload) {
   return fetchJson(`${API_BASE}/cashier/other-payments`, {
     method: 'POST',
@@ -96,4 +107,48 @@ export async function getOtherPaymentsSummary() {
 
 export async function getTodaysCashFlow() {
   return fetchJson(`${API_BASE}/cashier/cash-flow/today`);
+}
+
+export async function getCashierPenaltyRequests(status = 'ALL') {
+  return fetchJson(`${API_BASE}/cashier/cashier-requests/pr-penalties?status=${encodeURIComponent(status)}`);
+}
+
+export async function collectCashierPenaltyRequest(requestId, payload) {
+  return fetchJson(`${API_BASE}/cashier/cashier-requests/pr-penalties/${requestId}/collect`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getCashierNameChangeRequests(status = 'ALL') {
+  return fetchJson(`${API_BASE}/cashier/cashier-requests/name-changes?status=${encodeURIComponent(status)}`);
+}
+
+export async function collectCashierNameChangeRequest(requestId, payload) {
+  return fetchJson(`${API_BASE}/cashier/cashier-requests/name-changes/${requestId}/collect`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getCashierTransferVoucherRequests(status = 'ALL') {
+  return fetchJson(`${API_BASE}/cashier/cashier-requests/transfer-vouchers?status=${encodeURIComponent(status)}`);
+}
+
+export async function collectCashierTransferVoucherRequest(requestId, payload) {
+  return fetchJson(`${API_BASE}/cashier/cashier-requests/transfer-vouchers/${requestId}/collect`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getCashierNewConnectionRequests(status = 'ALL') {
+  return fetchJson(`${API_BASE}/cashier/cashier-requests/new-connections?status=${encodeURIComponent(status)}`);
+}
+
+export async function collectCashierNewConnectionRequest(requestId, payload) {
+  return fetchJson(`${API_BASE}/cashier/cashier-requests/new-connections/${requestId}/collect`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
 }

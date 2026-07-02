@@ -1,10 +1,10 @@
 function DriverCollectionsCard({ drivers }) {
   return (
     <section className="summary-card driver-collections-card">
-      <div className="card-heading">
+      <div className="card-heading summary-heading-block">
         <div>
-          <p className="section-label">Driver Collections</p>
-          <h2>Verify today’s deliveries</h2>
+          <p className="summary-title">Driver Collections</p>
+          <h2 className="summary-subtitle">Verify today's deliveries</h2>
         </div>
         <a href="#" className="view-link">View all →</a>
       </div>
@@ -14,8 +14,8 @@ function DriverCollectionsCard({ drivers }) {
             <div className="driver-item-left">
               <div className="item-avatar">{driver.initials}</div>
               <div className="driver-info">
-                <p className="item-title">{driver.name}</p>
-                <p className="item-meta">{driver.subtitle}</p>
+                <p className="driver-name">{driver.name}</p>
+                <p className="driver-subtitle">{driver.subtitle}</p>
               </div>
             </div>
             <div className="driver-item-right">

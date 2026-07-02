@@ -1,63 +1,144 @@
 import Header from '../components/layout/Header';
 import Sidebar from '../components/layout/Sidebar';
-import { useEffect, useState } from 'react';
-import { recordOfficeExpense, getTodayOfficeExpenses } from '../services/cashierApi';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  getCashOutExpenseRequests,
+  getTodayOfficeExpenses,
+  recordOfficeExpense,
+  reviewCashOutExpenseRequest,
+} from '../services/cashierApi';
+
+const formatCurrency = (amount) => `₹${Number(amount || 0).toLocaleString('en-IN')}`;
+
+// Resolve /uploads/... relative paths to a full URL using the same server as the API
+const API_SERVER_ROOT = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api')
+  .replace(/\/api$/, '');
+const resolveImageUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('/')) return `${API_SERVER_ROOT}${url}`;
+  return url;
+};
+
+const formatTimeAgo = (value) => {
+  if (!value) {
+    return 'Unknown time';
+  }
+
+  const target = new Date(value);
+  const diffMs = Date.now() - target.getTime();
+
+  if (Number.isNaN(diffMs) || diffMs < 0) {
+    return target.toLocaleString('en-IN');
+  }
+
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  if (diffHours < 1) {
+    const diffMinutes = Math.max(1, Math.floor(diffMs / (1000 * 60)));
+    return `${diffMinutes}m ago`;
+  }
+
+  if (diffHours < 24) {
+    return `${diffHours}h ago`;
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+};
+
+const getInitials = (name) =>
+  String(name || 'NA')
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+const formatOdometerRange = (startReading, endReading) => {
+  const start = Number(startReading || 0);
+  const end = Number(endReading || 0);
+
+  if (start > 0 && end > 0) {
+    return `Odomoter: ${start.toLocaleString('en-IN')} - ${end.toLocaleString('en-IN')}`;
+  }
+
+  if (start > 0) {
+    return `Odomoter: ${start.toLocaleString('en-IN')} - -`;
+  }
+
+  return 'Odomoter: -';
+};
 
 function CashOut() {
-  const statsCards = [
-    { icon: '⏱', label: 'Pending Approvals', value: '2' },
-    { icon: '✓', label: 'Approved Today', value: '₹34,200' },
-    { icon: '⚡', label: 'Avg Approval Time', value: '3.2s' },
-  ];
-
-  const driverExpenses = [
-    {
-      initials: 'SP',
-      name: 'Suresh Patel',
-      category: 'Vehicle Fuel',
-      time: '2h ago',
-      amount: '₹850',
-    },
-    {
-      initials: 'MY',
-      name: 'Mahesh Yadav',
-      category: 'Tyre Repair',
-      time: '3h ago',
-      amount: '₹1,450',
-    },
-    {
-      initials: 'VS',
-      name: 'Vikram Singh',
-      category: 'Toll Charges',
-      time: '5h ago',
-      amount: '₹240',
-    },
-  ];
-
-  const recentExpenses = [
-    { category: 'UTILITY', item: 'Electricity bill — March', amount: '₹8,400' },
-    { category: 'STATIONERY', item: 'Receipt books, pens', amount: '₹1,240' },
-    { category: 'REPAIR', item: 'Office printer service', amount: '₹2,200' },
-    { category: 'TRAVEL', item: 'Bank visit — auto fare', amount: '₹180' },
-  ];
-
   const [selectedCategory, setSelectedCategory] = useState('Utility');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [todayExpenses, setTodayExpenses] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [expenseRequests, setExpenseRequests] = useState([]);
+  const [expenseSummary, setExpenseSummary] = useState({ pendingApprovals: 0, approvedToday: 0 });
+  const [selectedExpense, setSelectedExpense] = useState(null);
+  const [payingExpense, setPayingExpense] = useState(null);
+  const [paymentMode, setPaymentMode] = useState('UPI');
+  const [paymentTxnId, setPaymentTxnId] = useState('');
+  const [paymentError, setPaymentError] = useState('');
+  const [reviewingId, setReviewingId] = useState(null);
+
+  const statsCards = useMemo(
+    () => [
+      {
+        key: 'pending',
+        label: 'Pending Approvals',
+        value: String(expenseSummary.pendingApprovals || 0),
+        icon: (
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+        ),
+      },
+      {
+        key: 'approved',
+        label: 'Approved Today',
+        value: formatCurrency(expenseSummary.approvedToday || 0),
+        icon: (
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+        ),
+      },
+      {
+        key: 'avg-time',
+        label: 'Avg Approved Time',
+        value: expenseSummary.avgApprovedTime || '5s',
+        icon: (
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"></path></svg>
+        ),
+      },
+    ],
+    [expenseSummary]
+  );
+
+  const fetchOfficeExpenses = async () => {
+    try {
+      const res = await getTodayOfficeExpenses();
+      if (res.success) setTodayExpenses(res.data || []);
+    } catch (err) {
+      // ignore for now
+    }
+  };
+
+  const fetchExpenseRequests = async () => {
+    try {
+      const res = await getCashOutExpenseRequests();
+      if (res.success) {
+        setExpenseRequests(res.data || []);
+        setExpenseSummary(res.summary || { pendingApprovals: 0, approvedToday: 0 });
+      }
+    } catch (err) {
+      alert('Failed to fetch expense requests');
+    }
+  };
 
   useEffect(() => {
-    async function fetchExpenses() {
-      try {
-        const res = await getTodayOfficeExpenses();
-        if (res.success) setTodayExpenses(res.data || []);
-      } catch (err) {
-        // ignore for now
-      }
-    }
-
-    fetchExpenses();
+    fetchOfficeExpenses();
+    fetchExpenseRequests();
   }, []);
 
   const handleSelectCategory = (cat) => setSelectedCategory(cat);
@@ -70,8 +151,7 @@ function CashOut() {
       await recordOfficeExpense({ category: selectedCategory, amount: numeric, description });
       setAmount('');
       setDescription('');
-      const res = await getTodayOfficeExpenses();
-      if (res.success) setTodayExpenses(res.data || []);
+      await fetchOfficeExpenses();
     } catch (err) {
       alert('Failed to submit expense');
     } finally {
@@ -79,7 +159,72 @@ function CashOut() {
     }
   };
 
+  const handleExpenseReview = async (expenseId, status, paymentDetails = {}) => {
+    setReviewingId(expenseId);
+    try {
+      await reviewCashOutExpenseRequest(expenseId, status, paymentDetails);
+      if (selectedExpense?.id === expenseId) {
+        setSelectedExpense(null);
+      }
+      if (payingExpense?.id === expenseId) {
+        setPayingExpense(null);
+      }
+      await fetchExpenseRequests();
+    } catch (err) {
+      alert(`Failed to ${status === 'APPROVED' ? 'approve' : 'reject'} expense`);
+    } finally {
+      setReviewingId(null);
+    }
+  };
+
+  const openApprovePaymentModal = (expense) => {
+    setPaymentError('');
+    setPaymentMode('UPI');
+    setPaymentTxnId('');
+    setPayingExpense(expense);
+  };
+
+  const closeApprovePaymentModal = () => {
+    if (payingExpense && reviewingId === payingExpense.id) {
+      return;
+    }
+    setPayingExpense(null);
+    setPaymentError('');
+  };
+
+  const handleApproveAndPay = async () => {
+    if (!payingExpense) {
+      return;
+    }
+
+    setPaymentError('');
+    const trimmedTxnId = paymentTxnId.trim();
+
+    if (paymentMode !== 'CASH' && !trimmedTxnId) {
+      setPaymentError('Transaction ID is required for non-cash payments.');
+      return;
+    }
+
+    await handleExpenseReview(payingExpense.id, 'APPROVED', {
+      paymentMode,
+      transactionId: trimmedTxnId,
+    });
+  };
+
   const categories = ['Salary', 'Utility', 'Repair', 'Stationery', 'Travel', 'Other'];
+
+  const expenseImages = selectedExpense?.billUrl
+    ? [{ label: 'Bill Photo', url: resolveImageUrl(selectedExpense.billUrl) }]
+    : [];
+
+  const odometerImages = [
+    selectedExpense?.startOdometerImageUrl
+      ? { label: 'Start Odometer', url: resolveImageUrl(selectedExpense.startOdometerImageUrl) }
+      : null,
+    selectedExpense?.endOdometerImageUrl
+      ? { label: 'End Odometer', url: resolveImageUrl(selectedExpense.endOdometerImageUrl) }
+      : null,
+  ].filter(Boolean);
 
   return (
     <div className="app-shell">
@@ -94,9 +239,9 @@ function CashOut() {
 
           <div className="cash-out-grid">
             <div className="stats-row">
-              {statsCards.map((stat, index) => (
-                <div key={index} className="stat-card">
-                  <div className="stat-icon">{stat.icon}</div>
+              {statsCards.map((stat) => (
+                <div key={stat.key} className="stat-card">
+                  <div className={`stat-icon ${stat.key}`}>{stat.icon}</div>
                   <p className="stat-label">{stat.label}</p>
                   <p className="stat-value">{stat.value}</p>
                 </div>
@@ -108,23 +253,40 @@ function CashOut() {
               <p>Quick approve — average review time 5 seconds</p>
 
               <div className="expense-list">
-                {driverExpenses.map((expense) => (
-                  <div key={expense.name} className="expense-item">
-                    <div className="expense-left">
-                      <div className="expense-avatar">{expense.initials}</div>
-                      <div className="expense-details">
-                        <strong>{expense.name}</strong>
-                        <p>{expense.category} · {expense.time}</p>
+                {expenseRequests.length ? (
+                  expenseRequests.map((expense) => (
+                    <div key={expense.id} className="expense-item">
+                      <div className="expense-left">
+                        <div className="expense-avatar">{getInitials(expense.createdByName)}</div>
+                        <div className="expense-details">
+                          <strong>{expense.createdByName}</strong>
+                          <p>{expense.category} · {formatTimeAgo(expense.createdAt)}</p>
+                          <p>{formatOdometerRange(expense.startOdometerReading, expense.endOdometerReading)}</p>
+                        </div>
+                      </div>
+                      <div className="expense-right">
+                        <span className="expense-amount">{formatCurrency(expense.amount)}</span>
+                        <button className="icon-btn" onClick={() => setSelectedExpense(expense)}>👁</button>
+                        <button
+                          className="approve-pay-btn"
+                          disabled={reviewingId === expense.id}
+                          onClick={() => openApprovePaymentModal(expense)}
+                        >
+                          {reviewingId === expense.id ? 'Processing...' : '✓ Approve & Pay'}
+                        </button>
+                        <button
+                          className="reject-btn"
+                          disabled={reviewingId === expense.id}
+                          onClick={() => handleExpenseReview(expense.id, 'REJECTED')}
+                        >
+                          ×
+                        </button>
                       </div>
                     </div>
-                    <div className="expense-right">
-                      <span className="expense-amount">{expense.amount}</span>
-                      <button className="icon-btn">👁</button>
-                      <button className="approve-pay-btn">✓ Approve & Pay</button>
-                      <button className="reject-btn">×</button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="expense-item expense-item-empty">No pending expense requests</div>
+                )}
               </div>
             </section>
 
@@ -195,6 +357,132 @@ function CashOut() {
           </div>
         </main>
       </div>
+
+      {selectedExpense ? (
+        <div className="cashout-modal-backdrop" onClick={() => setSelectedExpense(null)}>
+          <div className="cashout-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="cashout-modal-header">
+              <div>
+                <h3>{selectedExpense.createdByName}</h3>
+                <p>{selectedExpense.category} · {formatCurrency(selectedExpense.amount)}</p>
+              </div>
+              <button className="icon-btn" onClick={() => setSelectedExpense(null)}>×</button>
+            </div>
+
+            <div className="cashout-modal-sections">
+              <section className="cashout-modal-section">
+                <h4>Expense Images</h4>
+                {expenseImages.length ? (
+                  <div className="cashout-modal-grid">
+                    {expenseImages.map((item) => (
+                      <div key={item.label} className="cashout-photo-card">
+                        <p>{item.label}</p>
+                        <img src={item.url} alt={item.label} className="cashout-photo" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="cashout-photo-empty">No expense bill image</div>
+                )}
+              </section>
+
+              <section className="cashout-modal-section">
+                <h4>Odometer Images</h4>
+                {odometerImages.length ? (
+                  <div className="cashout-modal-grid">
+                    {odometerImages.map((item) => (
+                      <div key={item.label} className="cashout-photo-card">
+                        <p>{item.label}</p>
+                        <img src={item.url} alt={item.label} className="cashout-photo" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="cashout-photo-empty">No odometer images</div>
+                )}
+              </section>
+            </div>
+
+            <div className="cashout-modal-footer">
+              <button
+                className="reject-btn"
+                disabled={reviewingId === selectedExpense.id}
+                onClick={() => handleExpenseReview(selectedExpense.id, 'REJECTED')}
+              >
+                Reject
+              </button>
+              <button
+                className="approve-pay-btn"
+                disabled={reviewingId === selectedExpense.id}
+                onClick={() => openApprovePaymentModal(selectedExpense)}
+              >
+                {reviewingId === selectedExpense.id ? 'Processing...' : 'Approve & Pay'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {payingExpense ? (
+        <div className="cashout-payment-backdrop" onClick={closeApprovePaymentModal}>
+          <div className="cashout-payment-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="cashout-payment-header">
+              <p className="cashout-payment-kicker">Secure Payment Gateway</p>
+              <button className="icon-btn" onClick={closeApprovePaymentModal}>×</button>
+            </div>
+
+            <div className="cashout-payment-hero">
+              <p>Paying to</p>
+              <strong>{payingExpense.createdByName}</strong>
+              <span>{payingExpense.category}</span>
+              <h3>{formatCurrency(payingExpense.amount)}</h3>
+            </div>
+
+            <div className="cashout-payment-body">
+              <label className="cashout-payment-label">Select payment method</label>
+              <div className="cashout-payment-methods">
+                {[
+                  { value: 'UPI', label: 'UPI' },
+                  { value: 'CARD', label: 'Card' },
+                  { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+                  { value: 'CASH', label: 'Cash' },
+                ].map((method) => (
+                  <button
+                    key={method.value}
+                    type="button"
+                    className={`cashout-method-btn ${paymentMode === method.value ? 'active' : ''}`}
+                    onClick={() => setPaymentMode(method.value)}
+                  >
+                    {method.label}
+                  </button>
+                ))}
+              </div>
+
+              <label className="cashout-payment-label">
+                {paymentMode === 'UPI' ? 'UPI ID / Transaction ID' : paymentMode === 'BANK_TRANSFER' ? 'Bank Transfer ID / UTR' : paymentMode === 'CARD' ? 'Card Transaction ID' : 'Reference (optional for cash)'}
+              </label>
+              <input
+                type="text"
+                className="cashout-payment-input"
+                value={paymentTxnId}
+                onChange={(event) => setPaymentTxnId(event.target.value)}
+                placeholder={paymentMode === 'CASH' ? 'Optional reference' : 'Enter transaction ID'}
+              />
+
+              {paymentError ? <p className="cashout-payment-error">{paymentError}</p> : null}
+
+              <button
+                type="button"
+                className="cashout-pay-confirm-btn"
+                disabled={reviewingId === payingExpense.id}
+                onClick={handleApproveAndPay}
+              >
+                {reviewingId === payingExpense.id ? 'Processing...' : `Pay ${formatCurrency(payingExpense.amount)}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

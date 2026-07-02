@@ -3,6 +3,8 @@ import Header from '../components/layout/Header';
 import Sidebar from '../components/layout/Sidebar';
 import { closeCashierDay, getClosingSummary } from '../services/cashierApi';
 
+const CASH_DAY_CLOSED_KEY = 'cashier_day_closed';
+
 const initialDenominations = [
   { label: '₹500', value: 500, count: 0 },
   { label: '₹200', value: 200, count: 0 },
@@ -68,6 +70,8 @@ function Closing() {
     });
 
     if (response?.success) {
+      localStorage.setItem(CASH_DAY_CLOSED_KEY, 'true');
+      window.dispatchEvent(new Event('cashier-day-state-changed'));
       setMessage(response.message);
     } else {
       setError(response?.message || 'Unable to close day.');

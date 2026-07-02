@@ -3,6 +3,8 @@ import Header from '../components/layout/Header';
 import Sidebar from '../components/layout/Sidebar';
 import { getLastClosingBalance, startCashierDay } from '../services/cashierApi';
 
+const CASH_DAY_CLOSED_KEY = 'cashier_day_closed';
+
 function OpeningCash() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -55,6 +57,8 @@ function OpeningCash() {
     });
 
     if (response?.success) {
+      localStorage.setItem(CASH_DAY_CLOSED_KEY, 'false');
+      window.dispatchEvent(new Event('cashier-day-state-changed'));
       setMessage(response.message);
     } else {
       setError(response?.message || 'Unable to start day.');
@@ -131,12 +135,9 @@ function OpeningCash() {
               {error && <div className="error-box">{error}</div>}
 
               <div className="info-box">
-                <span className="info-icon">⚠</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
                 <p>
-                  Opening balance should match the previous closing balance for today. If this is the first day, it will be accepted as the starting cash.
-                </p>
-                <p>
-                  Previous closing balance: ₹{lastClosingBalance !== null ? lastClosingBalance.toLocaleString('en-IN') : '0'}
+                  You can't proceed until opening balance is entered. Once started, the day is logged with timestamp.
                 </p>
               </div>
             </section>

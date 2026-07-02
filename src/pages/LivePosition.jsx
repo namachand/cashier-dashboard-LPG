@@ -4,26 +4,42 @@ import { useEffect, useState } from 'react';
 import { getTodaysCashFlow } from '../services/cashierApi';
 
 function LivePosition() {
-  const [cashFlow, setCashFlow] = useState({ openingBalance: 0, inflow: { total: 0, count: 0 }, outflow: { total: 0, count: 0 }, currentBalance: 0 });
+  const [cashFlow, setCashFlow] = useState({ openingBalance: 0, inflow: { total: 0, count: 0 }, outflow: { total: 0, count: 0 }, cashInflow: 0, cashOutflow: 0, currentBalance: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchData() {
       try {
         const res = await getTodaysCashFlow();
-        if (res.success) {
+        if (isMounted && res.success) {
           setCashFlow(res);
         }
       } catch (err) {
         console.error('Failed to fetch cash flow:', err);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
+
+    // Fetch immediately, then poll so approvals (PR penalty, name change, new
+    // connection, transfer voucher, etc.) reflect in the live position without
+    // a manual refresh.
     fetchData();
+    const intervalId = setInterval(fetchData, 10000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
   }, []);
 
   const { openingBalance, inflow, outflow, currentBalance } = cashFlow;
+  const cashInflow = cashFlow.cashInflow ?? inflow.total;
+  const cashOutflow = cashFlow.cashOutflow ?? outflow.total;
 
   // Generate dummy hourly data for chart (in production, fetch from backend)
   const inflowPoints = [0, 8, 15, 22, 30, 35, 40, 45, 50, 58, 65, 72, inflow.total];
@@ -63,7 +79,7 @@ function LivePosition() {
               <div>
                 <p className="live-hero-label">Current Cash Balance</p>
                 <h2 className="live-hero-value">₹{currentBalance.toLocaleString('en-IN')}</h2>
-                <p className="live-hero-meta">Opening ₹{openingBalance.toLocaleString('en-IN')} + In ₹{inflow.total.toLocaleString('en-IN')} – Out ₹{outflow.total.toLocaleString('en-IN')}</p>
+                <p className="live-hero-meta">Opening ₹{openingBalance.toLocaleString('en-IN')} + Cash In ₹{cashInflow.toLocaleString('en-IN')} – Cash Out ₹{cashOutflow.toLocaleString('en-IN')}</p>
               </div>
               <div className="live-hero-chip">
                 <span className="live-chip-dot" />

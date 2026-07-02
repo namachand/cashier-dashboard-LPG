@@ -1,10 +1,10 @@
 function ExpenseApprovalsCard({ approvals }) {
   return (
     <section className="summary-card">
-      <div className="card-heading">
+      <div className="card-heading summary-heading-block">
         <div>
-          <p className="section-label">Expense Approvals</p>
-          <h2>Awaiting your review</h2>
+          <p className="summary-title">Expense Approvals</p>
+          <h2 className="summary-subtitle">Awaiting your review</h2>
         </div>
         <a href="#" className="view-link">View all →</a>
       </div>
@@ -12,10 +12,10 @@ function ExpenseApprovalsCard({ approvals }) {
         {approvals.map((item) => (
           <div key={item.label} className="approval-card">
             <div className="approval-top-row">
-              <p className="item-title">{item.label}</p>
+              <p className="approval-name">{item.label}</p>
               <p className="expense-amount approval-amount">{item.amount}</p>
             </div>
-            <p className="item-meta approval-meta">{item.category} · {item.time}</p>
+            <p className="approval-meta">{item.category} · {item.time}</p>
             <div className="approval-button-row">
               <button className="approve-button">Approve</button>
               <button className="reject-button">Reject</button>
