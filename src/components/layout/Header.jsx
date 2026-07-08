@@ -1,18 +1,41 @@
-import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const AUTH_TOKEN_KEY = 'cashier_auth_token';
 const AUTH_USER_KEY = 'cashier_auth_user';
 
-function Header() {
-  const navigate = useNavigate();
+const PAGE_META = {
+  '/': { title: 'Dashboard', subtitle: "Real time overview of today's cash operations" },
+  '/opening-cash': { title: 'Opening Cash', subtitle: 'Start your day by counting opening balance' },
+  '/cash-in': { title: 'Cash In', subtitle: 'Verify driver collections, office sales and other receipts' },
+  '/cash-out': { title: 'Cash Out', subtitle: 'Approve expenses and track outflow' },
+  '/live-position': { title: 'Live Cash Position', subtitle: 'Real-time balance with inflow vs outflow' },
+  '/other-payments': { title: 'Other Payments', subtitle: 'UPI, bank transfers and card transactions' },
+  '/closing': { title: 'Closing Cash', subtitle: 'Reconcile and close the day' },
+  '/reports': { title: 'Reports', subtitle: 'Daily, expense and collection reports' },
+  '/settings': { title: 'Settings', subtitle: 'Security, roles and preferences' },
+};
 
-  const date = useMemo(
-    () => new Date().toLocaleDateString('en-IN', {
-      weekday: 'long', year: 'numeric', month: 'short', day: 'numeric',
-    }),
-    [],
-  );
+function formatDate(value) {
+  if (!value) return '';
+  const d = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function Header({ dateRange = {}, onApplyRange }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const meta = PAGE_META[location.pathname] || PAGE_META['/'];
+
+  const [open, setOpen] = useState(false);
+  const [from, setFrom] = useState(dateRange.startDate || '');
+  const [to, setTo] = useState(dateRange.endDate || '');
+
+  useEffect(() => {
+    setFrom(dateRange.startDate || '');
+    setTo(dateRange.endDate || '');
+  }, [dateRange.startDate, dateRange.endDate]);
 
   const handleSignOut = () => {
     localStorage.removeItem(AUTH_TOKEN_KEY);
@@ -20,19 +43,88 @@ function Header() {
     navigate('/login');
   };
 
+  const label = dateRange.startDate
+    ? dateRange.startDate === dateRange.endDate
+      ? formatDate(dateRange.startDate)
+      : `${formatDate(dateRange.startDate)} – ${formatDate(dateRange.endDate)}`
+    : 'All dates';
+
+  const handleApply = () => {
+    if (!from && !to) {
+      onApplyRange?.({ startDate: '', endDate: '' });
+    } else {
+      const start = from || to;
+      const end = to || from;
+      onApplyRange?.({ startDate: start, endDate: end });
+    }
+    setOpen(false);
+  };
+
+  const handleClear = () => {
+    setFrom('');
+    setTo('');
+    onApplyRange?.({ startDate: '', endDate: '' });
+    setOpen(false);
+  };
+
   return (
     <header className="page-header">
       <div>
-        <p className="page-title">Dashboard</p>
-        <p className="page-description">Real time overview of today's cash operations</p>
+        <p className="page-title">{meta.title}</p>
+        <p className="page-description">{meta.subtitle}</p>
       </div>
 
       <div className="header-actions">
-        <label className="search-pill">
-          <span className="search-icon">🔍</span>
-          <span>Search bills, drivers…</span>
-        </label>
-        <div className="date-pill">{date}</div>
+        <div className="date-filter">
+          <button
+            type="button"
+            className="date-pill"
+            onClick={() => setOpen((prev) => !prev)}
+            aria-haspopup="dialog"
+            aria-expanded={open}
+          >
+            <span className="date-pill-icon">📅</span>
+            <span>{label}</span>
+            <span className="date-pill-caret">▾</span>
+          </button>
+
+          {open && (
+            <>
+              <div className="date-popover-backdrop" onClick={() => setOpen(false)} />
+              <div className="date-popover" role="dialog" aria-label="Select date range">
+                <div className="date-field">
+                  <label htmlFor="date-from">From</label>
+                  <input
+                    id="date-from"
+                    type="date"
+                    value={from}
+                    max={to || undefined}
+                    onChange={(e) => setFrom(e.target.value)}
+                  />
+                </div>
+                <div className="date-field">
+                  <label htmlFor="date-to">To</label>
+                  <input
+                    id="date-to"
+                    type="date"
+                    value={to}
+                    min={from || undefined}
+                    onChange={(e) => setTo(e.target.value)}
+                  />
+                </div>
+                <div className="date-popover-actions">
+                  <button type="button" className="date-btn ghost" onClick={handleClear}>
+                    Clear
+                  </button>
+                  <button type="button" className="date-btn primary" onClick={handleApply}>
+                    Apply
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
         <button type="button" className="icon-button notification-button" aria-label="Notifications">
           <span>🔔</span>
         </button>

@@ -39,6 +39,7 @@ function CashIn() {
   const [productResults, setProductResults] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [partCash, setPartCash] = useState('');
   const [transactionId, setTransactionId] = useState('');
   const [notes, setNotes] = useState('');
   const [salesFile, setSalesFile] = useState(null);
@@ -696,6 +697,8 @@ function CashIn() {
         address: customerAddress,
         items,
         payment_method: paymentMethod,
+        cash_amount: paymentMethod === 'PART_PAYMENT' ? Number(partCash || 0) : undefined,
+        transaction_id: transactionId || undefined,
       });
 
       if (response?.success) {
@@ -708,6 +711,7 @@ function CashIn() {
         setProductQuery('');
         setBillNumber('');
         setTransactionId('');
+        setPartCash('');
         setNotes('');
         setSalesFile(null);
         const saleResponse = await getTodayOfficeSales();
@@ -729,10 +733,6 @@ function CashIn() {
       <div className="page-content">
         <Header />
         <main className="page-main">
-          <div className="page-header-section">
-            <h1>Cash In</h1>
-            <p>Verify driver collections, office sales and other receipts</p>
-          </div>
 
           <div className="cash-in-tabs">
             <div className="tab-buttons">
@@ -759,7 +759,6 @@ function CashIn() {
                     <h2>Driver Collections · {drivers.length}</h2>
                     <p>Auto-fetched from delivery system. Verify before confirming.</p>
                   </div>
-                  <button className="filter-button">🔽 Filter</button>
                 </div>
 
                 <div className="table-container">
@@ -974,15 +973,43 @@ function CashIn() {
                         <label>Total Amount</label>
                         <input type="text" value={`₹ ${totalAmount.toLocaleString('en-IN')}`} readOnly />
                       </div>
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label>Payment Mode</label>
-                          <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}>
-                            <option value="CASH">Cash</option>
-                            <option value="UPI">UPI</option>
-                            <option value="CARD">Card</option>
-                          </select>
-                        </div>
+                      <div className="form-group">
+                        <label>Payment Mode</label>
+                        <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}>
+                          <option value="CASH">Cash</option>
+                          <option value="UPI">UPI</option>
+                          <option value="CARD">Card</option>
+                          <option value="PART_PAYMENT">Part Payment</option>
+                        </select>
+                      </div>
+                      {paymentMethod === 'PART_PAYMENT' ? (
+                        <>
+                          <div className="form-row">
+                            <div className="form-group">
+                              <label>Cash Amount</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={partCash}
+                                onChange={(event) => setPartCash(event.target.value)}
+                                placeholder="Cash portion"
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label>Bank Transfer ID / UTR</label>
+                              <input
+                                type="text"
+                                value={transactionId}
+                                onChange={(event) => setTransactionId(event.target.value)}
+                                placeholder="UTR / Txn ID"
+                              />
+                            </div>
+                          </div>
+                          <p className="field-note">
+                            Bank transfer amount: ₹{Math.max(totalAmount - Number(partCash || 0), 0).toLocaleString('en-IN')}
+                          </p>
+                        </>
+                      ) : (
                         <div className="form-group">
                           <label>Bank Transfer ID / UTR</label>
                           <input
@@ -992,7 +1019,7 @@ function CashIn() {
                             placeholder="UTR / Txn ID (optional)"
                           />
                         </div>
-                      </div>
+                      )}
                       <div className="form-group">
                         <label>Notes</label>
                         <textarea

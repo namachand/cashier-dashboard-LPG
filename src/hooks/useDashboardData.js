@@ -1,23 +1,34 @@
 import { useEffect, useState } from 'react';
 import { getDashboardData } from '../services/dashboardService';
 
-export function useDashboardData() {
+export function useDashboardData(range = {}) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const startDate = range?.startDate || '';
+  const endDate = range?.endDate || '';
+
   useEffect(() => {
-    getDashboardData()
+    let active = true;
+    setLoading(true);
+    setError(null);
+
+    getDashboardData({ startDate, endDate })
       .then((dashboardData) => {
-        setData(dashboardData);
+        if (active) setData(dashboardData);
       })
       .catch((err) => {
-        setError(err.message || 'Unable to load dashboard');
+        if (active) setError(err.message || 'Unable to load dashboard');
       })
       .finally(() => {
-        setLoading(false);
+        if (active) setLoading(false);
       });
-  }, []);
+
+    return () => {
+      active = false;
+    };
+  }, [startDate, endDate]);
 
   return { data, loading, error };
 }

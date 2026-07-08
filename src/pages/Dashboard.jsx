@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import Header from '../components/layout/Header';
 import Sidebar from '../components/layout/Sidebar';
 import { useDashboardData } from '../hooks/useDashboardData';
@@ -9,38 +10,39 @@ import ExpenseApprovalsCard from '../components/dashboard/ExpenseApprovalsCard';
 import NonCashReceiptsCard from '../components/dashboard/NonCashReceiptsCard';
 
 function Dashboard() {
-  const { data, loading, error } = useDashboardData();
-
-  if (loading) {
-    return <div className="loading-shell">Loading dashboard…</div>;
-  }
-
-  if (error) {
-    return <div className="error-shell">{error}</div>;
-  }
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
+  const { data, loading, error } = useDashboardData(dateRange);
 
   return (
     <div className="app-shell">
       <Sidebar />
       <div className="page-content">
-        <Header />
+        <Header dateRange={dateRange} onApplyRange={setDateRange} />
         <main className="dashboard-grid">
-          <section className="summary-row">
-            {data.metrics.map((metric) => (
-              <MetricCard key={metric.title} metric={metric} />
-            ))}
-          </section>
+          {loading ? (
+            <div className="loading-shell">Loading dashboard…</div>
+          ) : error ? (
+            <div className="error-shell">{error}</div>
+          ) : (
+            <>
+              <section className="summary-row">
+                {data.metrics.map((metric) => (
+                  <MetricCard key={metric.title} metric={metric} />
+                ))}
+              </section>
 
-          <section className="dashboard-main">
-            <ChartCard chart={data.chart} />
-            <PendingActionsCard actions={data.actions} />
-          </section>
+              <section className="dashboard-main">
+                <ChartCard chart={data.chart} />
+                <PendingActionsCard actions={data.actions} />
+              </section>
 
-          <section className="dashboard-subgrid">
-            <DriverCollectionsCard drivers={data.drivers} />
-            <ExpenseApprovalsCard approvals={data.approvals} />
-            <NonCashReceiptsCard receipts={data.receipts} />
-          </section>
+              <section className="dashboard-subgrid">
+                <DriverCollectionsCard drivers={data.drivers} />
+                <ExpenseApprovalsCard approvals={data.approvals} />
+                <NonCashReceiptsCard receipts={data.receipts} />
+              </section>
+            </>
+          )}
         </main>
       </div>
     </div>

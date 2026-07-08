@@ -14,10 +14,6 @@ function Reports() {
       <div className="page-content">
         <Header />
         <main className="page-main">
-          <section className="page-header-section">
-            <h1>Reports</h1>
-            <p>Daily, expense and collection reports</p>
-          </section>
 
           <section className="report-cards-row">
             {reports.map((report) => (

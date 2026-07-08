@@ -71,10 +71,6 @@ function OpeningCash() {
       <div className="page-content">
         <Header />
         <main className="page-main">
-          <div className="page-header-section">
-            <h1>Opening Cash</h1>
-            <p>Start your day by counting opening balance</p>
-          </div>
 
           <div className="opening-cash-grid">
             <section className="denomination-card">

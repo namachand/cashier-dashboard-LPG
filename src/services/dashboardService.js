@@ -1,5 +1,5 @@
 import { getCashierDashboard } from './cashierApi';
 
-export async function getDashboardData() {
-  return getCashierDashboard();
+export async function getDashboardData(range = {}) {
+  return getCashierDashboard(range);
 }

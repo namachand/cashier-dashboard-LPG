@@ -40,6 +40,7 @@ function LivePosition() {
   const { openingBalance, inflow, outflow, currentBalance } = cashFlow;
   const cashInflow = cashFlow.cashInflow ?? inflow.total;
   const cashOutflow = cashFlow.cashOutflow ?? outflow.total;
+  const breakdown = cashFlow.breakdown ?? { cash: cashInflow, online: 0, bank: 0 };
 
   // Generate dummy hourly data for chart (in production, fetch from backend)
   const inflowPoints = [0, 8, 15, 22, 30, 35, 40, 45, 50, 58, 65, 72, inflow.total];
@@ -65,10 +66,6 @@ function LivePosition() {
       <div className="page-content">
         <Header />
         <main className="page-main">
-          <section className="page-header-section">
-            <h1>Live Cash Position</h1>
-            <p>Real-time balance with inflow vs outflow</p>
-          </section>
 
           <section className="live-hero-card">
             <div className="live-hero-top">
@@ -84,6 +81,21 @@ function LivePosition() {
               <div className="live-hero-chip">
                 <span className="live-chip-dot" />
                 <span>All good</span>
+              </div>
+            </div>
+
+            <div className="live-breakdown-row">
+              <div className="live-breakdown-item">
+                <span className="live-breakdown-label">Cash</span>
+                <span className="live-breakdown-value">₹{Number(breakdown.cash || 0).toLocaleString('en-IN')}</span>
+              </div>
+              <div className="live-breakdown-item">
+                <span className="live-breakdown-label">Online</span>
+                <span className="live-breakdown-value">₹{Number(breakdown.online || 0).toLocaleString('en-IN')}</span>
+              </div>
+              <div className="live-breakdown-item">
+                <span className="live-breakdown-label">Bank</span>
+                <span className="live-breakdown-value">₹{Number(breakdown.bank || 0).toLocaleString('en-IN')}</span>
               </div>
             </div>
           </section>

@@ -165,10 +165,6 @@ function OtherPayments() {
       <div className="page-content">
         <Header />
         <main className="page-main">
-          <section className="page-header-section">
-            <h1>Other Payments</h1>
-            <p>UPI, bank transfers and card transactions</p>
-          </section>
 
           <section className="payments-summary-row">
             {buildSummaryCards(summary).map((card) => (
@@ -185,7 +181,7 @@ function OtherPayments() {
             <div className="card-heading">
               <div>
                 <p className="section-label">Bank Transfer Reconciliation</p>
-                <h2>Save customer transfer IDs, then upload bank statement to auto-match</h2>
+                <h2>Save customer transfer IDs for reconciliation</h2>
               </div>
             </div>
             <div className="reconciliation-grid">
@@ -263,14 +259,6 @@ function OtherPayments() {
                 >
                   {saving ? 'Saving...' : '+ Save transfer ID'}
                 </button>
-              </div>
-              <div className="statement-upload-card">
-                <div className="upload-dropzone">
-                  <span className="upload-icon">⬆️</span>
-                  <p>Click to upload CSV / XLSX / PDF</p>
-                  <small>Bank statement export</small>
-                </div>
-                <button className="match-button secondary">Match statement with saved IDs</button>
               </div>
             </div>
           </section>

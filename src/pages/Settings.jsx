@@ -24,10 +24,6 @@ function Settings() {
       <div className="page-content">
         <Header />
         <main className="page-main">
-          <section className="page-header-section">
-            <h1>Settings</h1>
-            <p>Security, roles and preferences</p>
-          </section>
 
           <section className="settings-card">
             <div className="card-heading">

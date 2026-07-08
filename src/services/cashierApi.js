@@ -2,8 +2,12 @@ import { fetchJson } from './api.js';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
 
-export async function getCashierDashboard() {
-  return fetchJson(`${API_BASE}/cashier/dashboard`);
+export async function getCashierDashboard(range = {}) {
+  const params = new URLSearchParams();
+  if (range?.startDate) params.append('startDate', range.startDate);
+  if (range?.endDate) params.append('endDate', range.endDate);
+  const query = params.toString();
+  return fetchJson(`${API_BASE}/cashier/dashboard${query ? `?${query}` : ''}`);
 }
 
 export async function getDriverCollections(page = 1, limit = 10) {
@@ -73,6 +77,23 @@ export async function recordOfficeExpense(payload) {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+export async function uploadSupportingDocument(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${API_BASE}/upload/supporting-document`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorMessage = await response.text();
+    throw new Error(errorMessage || 'Failed to upload file');
+  }
+
+  return response.json();
 }
 
 export async function getTodayOfficeExpenses() {

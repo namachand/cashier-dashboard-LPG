@@ -84,10 +84,6 @@ function Closing() {
       <div className="page-content">
         <Header />
         <main className="page-main">
-          <section className="page-header-section">
-            <h1>Closing Cash</h1>
-            <p>Reconcile and close the day</p>
-          </section>
 
           <section className="closing-grid">
             <div className="closing-card">

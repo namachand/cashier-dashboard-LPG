@@ -6,6 +6,7 @@ import {
   getTodayOfficeExpenses,
   recordOfficeExpense,
   reviewCashOutExpenseRequest,
+  uploadSupportingDocument,
 } from '../services/cashierApi';
 
 const formatCurrency = (amount) => `₹${Number(amount || 0).toLocaleString('en-IN')}`;
@@ -74,6 +75,7 @@ function CashOut() {
   const [selectedCategory, setSelectedCategory] = useState('Utility');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [receiptFile, setReceiptFile] = useState(null);
   const [todayExpenses, setTodayExpenses] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [expenseRequests, setExpenseRequests] = useState([]);
@@ -148,9 +150,21 @@ function CashOut() {
     const numeric = Number(amount.toString().replace(/[^0-9.-]+/g, '')) || 0;
     setSubmitting(true);
     try {
-      await recordOfficeExpense({ category: selectedCategory, amount: numeric, description });
+      let billUrl = null;
+      if (receiptFile) {
+        const uploadRes = await uploadSupportingDocument(receiptFile);
+        billUrl = uploadRes?.url || null;
+      }
+
+      await recordOfficeExpense({
+        category: selectedCategory,
+        amount: numeric,
+        description,
+        bill_url: billUrl,
+      });
       setAmount('');
       setDescription('');
+      setReceiptFile(null);
       await fetchOfficeExpenses();
     } catch (err) {
       alert('Failed to submit expense');
@@ -232,10 +246,6 @@ function CashOut() {
       <div className="page-content">
         <Header />
         <main className="page-main">
-          <div className="page-header-section">
-            <h1>Cash Out</h1>
-            <p>Approve expenses and track outflow</p>
-          </div>
 
           <div className="cash-out-grid">
             <div className="stats-row">
@@ -325,9 +335,16 @@ function CashOut() {
                   <div className="form-row">
                     <div className="form-field">
                       <label>Upload Receipt</label>
-                      <div className="file-upload-small">
-                        <p>⬇ Upload Receipt</p>
-                      </div>
+                      <input
+                        id="receipt-file-upload"
+                        type="file"
+                        accept="image/*,.pdf"
+                        style={{ display: 'none' }}
+                        onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                      />
+                      <label htmlFor="receipt-file-upload" className="file-upload-small" style={{ cursor: 'pointer' }}>
+                        <p>⬇ {receiptFile ? receiptFile.name : 'Upload Receipt'}</p>
+                      </label>
                     </div>
                   </div>
 
