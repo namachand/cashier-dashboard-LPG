@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   getCashOutExpenseRequests,
   getTodayOfficeExpenses,
+  getTodaysCashFlow,
   recordOfficeExpense,
   reviewCashOutExpenseRequest,
   uploadSupportingDocument,
@@ -76,7 +77,11 @@ function CashOut() {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [receiptFile, setReceiptFile] = useState(null);
+  const [officePaymentMode, setOfficePaymentMode] = useState('CASH');
+  const [officeTxnId, setOfficeTxnId] = useState('');
+  const [officeError, setOfficeError] = useState('');
   const [todayExpenses, setTodayExpenses] = useState([]);
+  const [availableCash, setAvailableCash] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [expenseRequests, setExpenseRequests] = useState([]);
   const [expenseSummary, setExpenseSummary] = useState({ pendingApprovals: 0, approvedToday: 0 });
@@ -89,6 +94,14 @@ function CashOut() {
 
   const statsCards = useMemo(
     () => [
+      {
+        key: 'available-cash',
+        label: 'Available Cash',
+        value: availableCash === null ? '—' : formatCurrency(availableCash),
+        icon: (
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>
+        ),
+      },
       {
         key: 'pending',
         label: 'Pending Approvals',
@@ -114,7 +127,7 @@ function CashOut() {
         ),
       },
     ],
-    [expenseSummary]
+    [expenseSummary, availableCash]
   );
 
   const fetchOfficeExpenses = async () => {
@@ -138,16 +151,43 @@ function CashOut() {
     }
   };
 
+  const fetchAvailableCash = async () => {
+    try {
+      const res = await getTodaysCashFlow();
+      if (res.success) {
+        setAvailableCash(Number(res.currentBalance || 0));
+      }
+    } catch (err) {
+      // Non-blocking: enforcement still happens server-side on submit.
+    }
+  };
+
   useEffect(() => {
     fetchOfficeExpenses();
     fetchExpenseRequests();
+    fetchAvailableCash();
   }, []);
 
   const handleSelectCategory = (cat) => setSelectedCategory(cat);
 
   const handleSubmit = async () => {
+    setOfficeError('');
     if (!selectedCategory || amount === '') return alert('Please enter category and amount');
     const numeric = Number(amount.toString().replace(/[^0-9.-]+/g, '')) || 0;
+
+    const trimmedTxnId = officeTxnId.trim();
+    if (officePaymentMode !== 'CASH' && !trimmedTxnId) {
+      setOfficeError('Transaction ID is required for non-cash payments.');
+      return;
+    }
+
+    if (officePaymentMode === 'CASH' && availableCash !== null && numeric > availableCash) {
+      setOfficeError(
+        `Insufficient cash balance. Available ${formatCurrency(availableCash)}, expense ${formatCurrency(numeric)}. Pay via UPI/Card/Bank Transfer instead.`
+      );
+      return;
+    }
+
     setSubmitting(true);
     try {
       let billUrl = null;
@@ -161,13 +201,18 @@ function CashOut() {
         amount: numeric,
         description,
         bill_url: billUrl,
+        payment_mode: officePaymentMode,
+        transaction_id: trimmedTxnId || null,
       });
       setAmount('');
       setDescription('');
       setReceiptFile(null);
+      setOfficePaymentMode('CASH');
+      setOfficeTxnId('');
       await fetchOfficeExpenses();
+      await fetchAvailableCash();
     } catch (err) {
-      alert('Failed to submit expense');
+      setOfficeError(err?.message || 'Failed to submit expense');
     } finally {
       setSubmitting(false);
     }
@@ -175,6 +220,7 @@ function CashOut() {
 
   const handleExpenseReview = async (expenseId, status, paymentDetails = {}) => {
     setReviewingId(expenseId);
+    setPaymentError('');
     try {
       await reviewCashOutExpenseRequest(expenseId, status, paymentDetails);
       if (selectedExpense?.id === expenseId) {
@@ -184,8 +230,15 @@ function CashOut() {
         setPayingExpense(null);
       }
       await fetchExpenseRequests();
+      await fetchAvailableCash();
     } catch (err) {
-      alert(`Failed to ${status === 'APPROVED' ? 'approve' : 'reject'} expense`);
+      const message = err?.message || `Failed to ${status === 'APPROVED' ? 'approve' : 'reject'} expense`;
+      // Keep the payment modal open so the cashier can switch mode / fix the amount.
+      if (payingExpense?.id === expenseId) {
+        setPaymentError(message);
+      } else {
+        alert(message);
+      }
     } finally {
       setReviewingId(null);
     }
@@ -216,6 +269,17 @@ function CashOut() {
 
     if (paymentMode !== 'CASH' && !trimmedTxnId) {
       setPaymentError('Transaction ID is required for non-cash payments.');
+      return;
+    }
+
+    if (
+      paymentMode === 'CASH' &&
+      availableCash !== null &&
+      Number(payingExpense.amount || 0) > availableCash
+    ) {
+      setPaymentError(
+        `Insufficient cash balance. Available ${formatCurrency(availableCash)}, expense ${formatCurrency(payingExpense.amount)}. Pay via UPI/Card/Bank Transfer instead.`
+      );
       return;
     }
 
@@ -332,6 +396,42 @@ function CashOut() {
                     <input value={description} onChange={(e) => setDescription(e.target.value)} type="text" placeholder="What is this for?" />
                   </div>
 
+                  <div className="form-group">
+                    <label>Payment Mode</label>
+                    <div className="category-buttons">
+                      {[
+                        { value: 'CASH', label: 'Cash' },
+                        { value: 'UPI', label: 'UPI' },
+                        { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+                        { value: 'CARD', label: 'Card' },
+                      ].map((mode) => (
+                        <button
+                          key={mode.value}
+                          type="button"
+                          className={`cat-btn ${officePaymentMode === mode.value ? 'active' : ''}`}
+                          onClick={() => {
+                            setOfficePaymentMode(mode.value);
+                            setOfficeError('');
+                          }}
+                        >
+                          {mode.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="form-field">
+                    <label>
+                      {officePaymentMode === 'CASH' ? 'Transaction ID (optional)' : 'Transaction ID'}
+                    </label>
+                    <input
+                      value={officeTxnId}
+                      onChange={(e) => setOfficeTxnId(e.target.value)}
+                      type="text"
+                      placeholder={officePaymentMode === 'CASH' ? 'Optional reference' : 'Enter transaction ID'}
+                    />
+                  </div>
+
                   <div className="form-row">
                     <div className="form-field">
                       <label>Upload Receipt</label>
@@ -348,6 +448,8 @@ function CashOut() {
                     </div>
                   </div>
 
+                  {officeError ? <p className="cashout-payment-error">{officeError}</p> : null}
+
                   <button type="button" disabled={submitting} onClick={handleSubmit} className="submit-expense-btn">{submitting ? 'Submitting...' : 'Submit Expense'}</button>
                 </form>
               </section>
@@ -361,7 +463,10 @@ function CashOut() {
                     todayExpenses.map((expense) => (
                       <div key={expense.id} className="expense-category-item">
                         <div className="category-label">{expense.category}</div>
-                        <p className="expense-item-name">{expense.description || '-'}</p>
+                        <p className="expense-item-name">
+                          {expense.description || '-'}
+                          {expense.paymentMode ? ` · ${expense.paymentMode.replace('_', ' ')}` : ''}
+                        </p>
                         <span className="expense-item-amount">₹{Number(expense.amount).toLocaleString('en-IN')}</span>
                       </div>
                     ))
@@ -456,6 +561,9 @@ function CashOut() {
             </div>
 
             <div className="cashout-payment-body">
+              {availableCash !== null ? (
+                <p className="cashout-payment-balance">Available cash: {formatCurrency(availableCash)}</p>
+              ) : null}
               <label className="cashout-payment-label">Select payment method</label>
               <div className="cashout-payment-methods">
                 {[

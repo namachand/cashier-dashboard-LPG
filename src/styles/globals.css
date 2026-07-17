@@ -2856,6 +2856,16 @@ body {
   font-weight: 600;
 }
 
+.cashout-payment-balance {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #f0f7f2;
+  color: #1f7a49;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .cashout-pay-confirm-btn {
   margin-top: 4px;
   border: none;

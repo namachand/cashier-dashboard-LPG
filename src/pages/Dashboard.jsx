@@ -9,8 +9,20 @@ import DriverCollectionsCard from '../components/dashboard/DriverCollectionsCard
 import ExpenseApprovalsCard from '../components/dashboard/ExpenseApprovalsCard';
 import NonCashReceiptsCard from '../components/dashboard/NonCashReceiptsCard';
 
+// Local (not UTC) YYYY-MM-DD so the default range matches the cashier's calendar day.
+function todayIso() {
+  const d = new Date();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
 function Dashboard() {
-  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
+  // Default the date filter to today so the dashboard opens on today's data.
+  const [dateRange, setDateRange] = useState(() => {
+    const today = todayIso();
+    return { startDate: today, endDate: today };
+  });
   const { data, loading, error } = useDashboardData(dateRange);
 
   return (

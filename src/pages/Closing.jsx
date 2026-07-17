@@ -72,6 +72,11 @@ function Closing() {
     if (response?.success) {
       localStorage.setItem(CASH_DAY_CLOSED_KEY, 'true');
       window.dispatchEvent(new Event('cashier-day-state-changed'));
+      // Day is closed: the "since last close" window is now empty, so the
+      // system-calculated cash resets to 0.
+      setSystemCash(0);
+      setDenominations(initialDenominations);
+      setDifferenceReason('');
       setMessage(response.message);
     } else {
       setError(response?.message || 'Unable to close day.');

@@ -478,7 +478,7 @@ function CashIn() {
       handleResetPenaltyRequestForm();
     } catch (error) {
       console.error('Unable to submit cashier penalty request:', error);
-      setCashierPenaltyError('Unable to submit request.');
+      setCashierPenaltyError(error?.message || 'Unable to submit request.');
     } finally {
       setRequestSubmitting(false);
     }
