@@ -18,9 +18,11 @@ function OpeningCash() {
     { label: '₹20', value: 20, count: 0 },
     { label: '₹10', value: 10, count: 0 },
   ]);
+  const [coinAmount, setCoinAmount] = useState(0);
 
   const totalNotes = denominations.reduce((sum, d) => sum + d.count, 0);
-  const totalBalance = denominations.reduce((sum, d) => sum + d.value * d.count, 0);
+  const totalBalance =
+    denominations.reduce((sum, d) => sum + d.value * d.count, 0) + Number(coinAmount || 0);
 
   useEffect(() => {
     async function loadLastClosing() {
@@ -48,12 +50,15 @@ function OpeningCash() {
 
     const response = await startCashierDay({
       totalAmount: totalBalance,
-      denominations: denominations.map((denom) => ({
-        label: denom.label,
-        value: denom.value,
-        count: denom.count,
-        subtotal: denom.value * denom.count,
-      })),
+      denominations: [
+        ...denominations.map((denom) => ({
+          label: denom.label,
+          value: denom.value,
+          count: denom.count,
+          subtotal: denom.value * denom.count,
+        })),
+        { label: 'Coins', value: Number(coinAmount || 0), count: 1, subtotal: Number(coinAmount || 0) },
+      ],
     });
 
     if (response?.success) {
@@ -104,6 +109,28 @@ function OpeningCash() {
                     </div>
                   </div>
                 ))}
+
+                <div className="denomination-row">
+                  <div className="denom-value">Coins</div>
+                  <span className="denom-multiply">₹</span>
+                  <input
+                    className="denom-input"
+                    type="number"
+                    min="0"
+                    value={coinAmount}
+                    placeholder="Total"
+                    onChange={(event) => {
+                      const amount = Number(event.target.value);
+                      if (Number.isNaN(amount) || amount < 0) return;
+                      setCoinAmount(amount);
+                    }}
+                  />
+                  <div className="denom-unit">total</div>
+                  <div className="denom-right">
+                    <span className="denom-label">Subtotal</span>
+                    <span className="denom-subtotal">₹{Number(coinAmount || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
               </div>
             </section>
 

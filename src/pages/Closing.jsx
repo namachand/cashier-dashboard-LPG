@@ -16,6 +16,7 @@ const initialDenominations = [
 
 function Closing() {
   const [denominations, setDenominations] = useState(initialDenominations);
+  const [coinAmount, setCoinAmount] = useState(0);
   const [differenceReason, setDifferenceReason] = useState('');
   const [systemCash, setSystemCash] = useState(0);
   const [message, setMessage] = useState('');
@@ -36,10 +37,12 @@ function Closing() {
     loadSystemCash();
   }, []);
 
-  const physicalTotal = useMemo(
+  const notesTotal = useMemo(
     () => denominations.reduce((sum, denom) => sum + denom.value * Number(denom.count || 0), 0),
     [denominations]
   );
+
+  const physicalTotal = notesTotal + Number(coinAmount || 0);
 
   const difference = physicalTotal - systemCash;
 
@@ -47,6 +50,12 @@ function Closing() {
     const count = Number(value);
     if (Number.isNaN(count) || count < 0) return;
     setDenominations((prev) => prev.map((denom, idx) => (idx === index ? { ...denom, count } : denom)));
+  };
+
+  const handleCoinChange = (value) => {
+    const amount = Number(value);
+    if (Number.isNaN(amount) || amount < 0) return;
+    setCoinAmount(amount);
   };
 
   const handleCloseDay = async () => {
@@ -60,12 +69,15 @@ function Closing() {
 
     const response = await closeCashierDay({
       closingAmount: physicalTotal,
-      denominations: denominations.map((denom) => ({
-        label: denom.label,
-        value: denom.value,
-        count: denom.count,
-        subtotal: denom.value * denom.count,
-      })),
+      denominations: [
+        ...denominations.map((denom) => ({
+          label: denom.label,
+          value: denom.value,
+          count: denom.count,
+          subtotal: denom.value * denom.count,
+        })),
+        { label: 'Coins', value: Number(coinAmount || 0), count: 1, subtotal: Number(coinAmount || 0) },
+      ],
       differenceReason: differenceReason.trim() || null,
     });
 
@@ -76,6 +88,7 @@ function Closing() {
       // system-calculated cash resets to 0.
       setSystemCash(0);
       setDenominations(initialDenominations);
+      setCoinAmount(0);
       setDifferenceReason('');
       setMessage(response.message);
     } else {
@@ -111,6 +124,17 @@ function Closing() {
                     <strong>₹{(denom.value * denom.count).toLocaleString('en-IN')}</strong>
                   </div>
                 ))}
+                <div className="denomination-pair">
+                  <span>Coins</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={coinAmount}
+                    onChange={(event) => handleCoinChange(event.target.value)}
+                    placeholder="₹ total"
+                  />
+                  <strong>₹{Number(coinAmount || 0).toLocaleString('en-IN')}</strong>
+                </div>
               </div>
             </div>
 
@@ -144,7 +168,14 @@ function Closing() {
                   />
                 </label>
                 <div className="difference-actions">
-                  <button type="button" className="secondary-button" onClick={() => setDenominations(initialDenominations)}>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => {
+                      setDenominations(initialDenominations);
+                      setCoinAmount(0);
+                    }}
+                  >
                     Reset Counts
                   </button>
                   <button type="button" className="primary-button" onClick={handleCloseDay}>

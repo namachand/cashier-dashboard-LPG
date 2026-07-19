@@ -15,6 +15,14 @@ const initialSummary = {
   CARD: { count: 0, totalAmount: 0 },
 };
 
+// Local (not UTC) YYYY-MM-DD so the default range matches the cashier's calendar day.
+function todayIso() {
+  const d = new Date();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
 const buildSummaryCards = (summary) => [
   {
     label: 'UPI',
@@ -37,6 +45,11 @@ const buildSummaryCards = (summary) => [
 ];
 
 function OtherPayments() {
+  // Date filter defaults to today; changing it refetches the summary + list.
+  const [dateRange, setDateRange] = useState(() => {
+    const today = todayIso();
+    return { startDate: today, endDate: today };
+  });
   const [summary, setSummary] = useState(initialSummary);
   const [savedTransfers, setSavedTransfers] = useState([]);
   const [customerName, setCustomerName] = useState('');
@@ -50,7 +63,7 @@ function OtherPayments() {
 
   const loadSummary = async () => {
     try {
-      const res = await getOtherPaymentsSummary();
+      const res = await getOtherPaymentsSummary(dateRange);
       if (res.success) {
         setSummary({
           UPI: res.summary.UPI || initialSummary.UPI,
@@ -65,7 +78,7 @@ function OtherPayments() {
 
   const loadSavedTransfers = async () => {
     try {
-      const res = await getOtherPayments();
+      const res = await getOtherPayments(dateRange);
       if (res.success) {
         setSavedTransfers(res.data);
       }
@@ -85,7 +98,8 @@ function OtherPayments() {
 
   useEffect(() => {
     loadData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateRange.startDate, dateRange.endDate]);
 
   const handleCustomerSearch = async (value) => {
     setCustomerName(value);
@@ -163,7 +177,7 @@ function OtherPayments() {
     <div className="app-shell">
       <Sidebar />
       <div className="page-content">
-        <Header />
+        <Header dateRange={dateRange} onApplyRange={setDateRange} />
         <main className="page-main">
 
           <section className="payments-summary-row">

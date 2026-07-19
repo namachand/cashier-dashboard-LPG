@@ -118,12 +118,20 @@ export async function recordOtherPayment(payload) {
   });
 }
 
-export async function getOtherPayments() {
-  return fetchJson(`${API_BASE}/cashier/other-payments`);
+function buildRangeQuery(range = {}) {
+  const params = new URLSearchParams();
+  if (range?.startDate) params.append('startDate', range.startDate);
+  if (range?.endDate) params.append('endDate', range.endDate);
+  const query = params.toString();
+  return query ? `?${query}` : '';
 }
 
-export async function getOtherPaymentsSummary() {
-  return fetchJson(`${API_BASE}/cashier/other-payments/summary`);
+export async function getOtherPayments(range = {}) {
+  return fetchJson(`${API_BASE}/cashier/other-payments${buildRangeQuery(range)}`);
+}
+
+export async function getOtherPaymentsSummary(range = {}) {
+  return fetchJson(`${API_BASE}/cashier/other-payments/summary${buildRangeQuery(range)}`);
 }
 
 export async function getTodaysCashFlow() {
